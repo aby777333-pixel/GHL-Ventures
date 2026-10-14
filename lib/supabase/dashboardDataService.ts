@@ -31,6 +31,8 @@ async function safeFetch<T>(
 
 // ── Service Functions ───────────────────────────────────────
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function fetchPortfolioAssets(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
 
@@ -38,9 +40,17 @@ export async function fetchPortfolioAssets(clientId?: string) {
   const idList: string[] = [clientId]
   let clientRow: any = null
   try {
+    // Same uuid trap as below: id and user_id are uuid columns while
+    // client_code and ghl_id are text. Probing all four with one value makes
+    // PostgREST reject the whole request with 22P02, the resolver returns
+    // nothing, and the portfolio silently reads 0. Probe only the columns
+    // whose type matches the shape of clientId.
+    const aliasFilter = UUID_RE.test(String(clientId || ''))
+      ? `id.eq.${clientId},user_id.eq.${clientId}`
+      : `client_code.eq.${clientId},ghl_id.eq.${clientId}`
     const { data: c } = await sb.from('clients')
       .select('id, user_id, client_code, ghl_id, total_invested, created_at')
-      .or(`id.eq.${clientId},user_id.eq.${clientId},client_code.eq.${clientId},ghl_id.eq.${clientId}`)
+      .or(aliasFilter)
       .maybeSingle()
     if (c) {
       clientRow = c
@@ -56,7 +66,6 @@ export async function fetchPortfolioAssets(clientId?: string) {
   // request with 22P02 invalid input syntax for type uuid; safeFetch then
   // swallows that into an empty array and the portfolio silently reads 0.
   // Only uuid-shaped identifiers may go into the filter.
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   const uuidIds = idList.filter(id => UUID_RE.test(String(id || '')))
   if (uuidIds.length === 0) return []
   const orFilter = uuidIds.map(id => `client_id.eq.${id},user_id.eq.${id}`).join(',')
