@@ -20,6 +20,9 @@ export function generateStaticParams() {
     { tab: ['calculators'] },
     { tab: ['ai-advisor'] },
     { tab: ['referrals'] },
+    { tab: ['G-referral'] },
+    { tab: ['CP-referral'] },
+    { tab: ['MCP-referral'] },
     { tab: ['profile'] },
     { tab: ['settings'] },
   ]

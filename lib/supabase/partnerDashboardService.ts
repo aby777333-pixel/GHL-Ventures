@@ -421,8 +421,8 @@ export async function generateAgreementPDF(options: {
       {
         num: '3. COMMISSION & OVERRIDES SCHEDULE',
         text: isMaster
-          ? 'Master Channel Partner Compensation:\n• Sale of Associate Channel Partner: 3.00% (₹1,00,00,000 to ₹5,00,00,000), 4.00% (₹5,00,00,000 to Above).\n• Sale of Master Channel Partner: 0.50% on Any Investment.'
-          : 'Associate Channel Partner Compensation:\n• ₹1,00,00,000 to ₹5,00,00,000: 3.00%\n• ₹5,00,00,000 to Above: 4.00%'
+          ? 'Master Channel Partner Compensation:\n• Sale of Associate Channel Partner: 3.00% (₹1,00,00,000 to ₹4,99,99,999), 4.00% (₹5,00,00,000 and Above).\n• Sale of Master Channel Partner: 0.50% on Any Investment.'
+          : 'Associate Channel Partner Compensation:\n• ₹1,00,00,000 to ₹4,99,99,999: 3.00%\n• ₹5,00,00,000 and Above: 4.00%'
       },
       {
         num: '4. CONFIDENTIALITY & DATA PROTECTION',
@@ -531,16 +531,16 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
 
   const slabs = {
     GI: [
-      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
-      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹4,99,99,999', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 2', volume: '₹5,00,00,000 and Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
     ],
     CPL: [
-      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
-      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹4,99,99,999', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 2', volume: '₹5,00,00,000 and Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
     ],
     MCP: [
-      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
-      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹4,99,99,999', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 2', volume: '₹5,00,00,000 and Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
       { tier: 'Master Override', volume: 'Any Investment', rate: '0.50%', note: 'Sale of Master Channel Partner' },
     ],
   }

@@ -130,8 +130,14 @@ export default function InvestorReferralDashboard({
   }, [effectiveId, showToast])
 
   // Filtered referrals from API data
+  // A general GHL referral earns a flat 2%. The 3% / 4% / 0.5% slabs belong
+  // to channel partners and master channel partners, not general investors.
+  const GHL_REFERRAL_RATE = 2
+
+  // A referral only counts once the person referred has actually invested,
+  // so an un-invested signup never reaches the list or the income table.
   const rawReferrals: ReferralMember[] = useMemo(() => {
-    return data?.referrals || []
+    return (data?.referrals || []).filter((r: any) => (Number(r.investmentAmount) || 0) > 0)
   }, [data?.referrals])
 
   // Apply search query to referrals
@@ -151,7 +157,7 @@ export default function InvestorReferralDashboard({
   // Aggregate KPI calculations for Investor
   const metrics = useMemo(() => {
     const totalInvestment = rawReferrals.reduce((acc, r) => acc + (Number(r.investmentAmount) || 0), 0)
-    const grossIncome = rawReferrals.reduce((acc, r) => acc + (Number(r.commissionAmount) || 0), 0)
+    const grossIncome = rawReferrals.reduce((acc, r) => acc + ((Number(r.investmentAmount) || 0) * GHL_REFERRAL_RATE) / 100, 0)
     const tdsDeducted = grossIncome * 0.02 // Statutory 2% Section 194H TDS
     const netIncome = Math.max(0, grossIncome - tdsDeducted)
     const totalReferrals = data?.kpis?.totalReferrals || rawReferrals.length
@@ -193,7 +199,7 @@ export default function InvestorReferralDashboard({
     const csvRows = [
       headers.join(','),
       ...filteredReferrals.map((r, i) => {
-        const gross = Number(r.commissionAmount) || 0
+        const gross = ((Number(r.investmentAmount) || 0) * GHL_REFERRAL_RATE) / 100
         const tds = gross * 0.02
         const net = gross - tds
         return [
@@ -203,7 +209,7 @@ export default function InvestorReferralDashboard({
           `"GHL Growth Fund AIF"`,
           `"${r.date || '—'}"`,
           Number(r.investmentAmount) || 0,
-          `"${r.commissionRate || 2.0}%"`,
+          `"${GHL_REFERRAL_RATE.toFixed(2)}%"`,
           gross.toFixed(2),
           tds.toFixed(2),
           net.toFixed(2),
@@ -417,21 +423,7 @@ export default function InvestorReferralDashboard({
               'bg-blue-500/10 border-blue-500/30 text-blue-400',
               'bg-blue-50 border-blue-200 text-blue-700'
             )}`}>
-              3.00% — ₹1 Cr to ₹5 Cr
-            </span>
-
-            <span className={`font-bold px-3 py-1 rounded-full text-xs border ${t(
-              'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
-              'bg-[#e8f5e9] border-[#a5d6a7] text-[#1b5e20]'
-            )}`}>
-              4.00% — ₹5 Cr &amp; Above
-            </span>
-
-            <span className={`font-bold px-3 py-1 rounded-full text-xs border ${t(
-              'bg-amber-500/10 border-amber-500/30 text-amber-400',
-              'bg-amber-50 border-amber-200 text-amber-700'
-            )}`}>
-              0.50% — Master CP (Any Investment)
+              {GHL_REFERRAL_RATE.toFixed(2)}% — Any Investment
             </span>
 
             <span className={`text-xs font-medium ml-1 ${t('text-gray-400', 'text-gray-500')}`}>
@@ -669,14 +661,14 @@ export default function InvestorReferralDashboard({
                   {filteredReferrals.length === 0 ? (
                     <tr>
                       <td colSpan={11} className={`py-16 text-center text-xs italic ${t('text-gray-400', 'text-gray-500')}`}>
-                        No new income data for selected period
+                        No referral
                       </td>
                     </tr>
                   ) : (
                     filteredReferrals.map((r, i) => {
                       const amount = Number(r.investmentAmount) || 0
-                      const slabRate = r.commissionRate || (amount >= 50000000 ? 4.00 : 3.00)
-                      const gross = Number(r.commissionAmount) || (amount * slabRate) / 100
+                      const slabRate = GHL_REFERRAL_RATE
+                      const gross = (amount * slabRate) / 100
                       const tds = gross * 0.02
                       const net = gross - tds
 

@@ -663,7 +663,7 @@ export default function ReferralDashboard({
   }, [giReferrals, selectedMonth, selectedYear, data?.chartData])
 
   // Determine active Sale of Associate Channel Partner slab:
-  // ₹1,00,00,000 to ₹5,00,00,000 (3.00%), ₹5,00,00,000 to Above (4.00%)
+  // ₹1,00,00,000 to ₹4,99,99,999 (3.00%), ₹5,00,00,000 and Above (4.00%)
   const { giRate, giActiveIndex, giEarned } = useMemo(() => {
     let rate = 0
     let activeIdx = -1
@@ -1353,9 +1353,7 @@ export default function ReferralDashboard({
       <div
         className={`grid gap-4 ${partnerRole === 'MCP'
           ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-          : partnerRole === 'CPL'
-            ? 'grid-cols-1 sm:grid-cols-2'
-            : 'grid-cols-1 sm:grid-cols-2 max-w-xl'
+          : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
           }`}
       >
         {/* Card 1: Create General Investor (All Roles) */}
@@ -1432,61 +1430,7 @@ export default function ReferralDashboard({
           </div>
         )}
 
-        {/* Card 3: Master Channel Partner Terms (MCP ONLY — HIDDEN for CPL and GI) */}
-        {partnerRole === 'MCP' && (
-          <div
-            className={`rounded-2xl p-5 border flex flex-col justify-between transition-all hover:scale-[1.01] ${t(
-              'bg-[#150606] border-white/10 shadow-lg',
-              'bg-white border-gray-200 shadow-sm'
-            )}`}
-          >
-            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${t('text-gray-400', 'text-gray-500')}`}>
-              MASTER CHANNEL PARTNER TERMS
-            </span>
-            <button
-              onClick={() => {
-                setAgreementModalOpen(true)
-              }}
-              className={`mt-4 w-full py-2.5 rounded-xl text-xs font-bold border transition-all ${t(
-                'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
-              )}`}
-            >
-              View Agreement
-            </button>
-          </div>
-        )}
 
-        {/* Card 4: Channel Partner Terms (CPL and MCP ONLY — HIDDEN for GI) */}
-        {(partnerRole === 'CPL' || partnerRole === 'MCP') && (
-          <div
-            className={`rounded-2xl p-5 border flex flex-col justify-between transition-all hover:scale-[1.01] ${t(
-              'bg-[#150606] border-white/10 shadow-lg',
-              'bg-white border-gray-200 shadow-sm'
-            )}`}
-          >
-            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${t('text-gray-400', 'text-gray-500')}`}>
-              CHANNEL PARTNER TERMS
-            </span>
-            <button
-              onClick={() => {
-                setAgreementModalOpen(true)
-              }}
-              className={`mt-4 w-full py-2.5 rounded-xl text-xs font-bold border transition-all ${t(
-                'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
-              )}`}
-            >
-              View Agreement
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          4. KPI SUMMARY METRICS (6 FUNCTIONAL CARDS)
-          ───────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Investment */}
         <div
           onClick={() => {
@@ -1931,8 +1875,8 @@ export default function ReferralDashboard({
           {/* Slabs Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { label: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', index: 0 },
-              { label: '₹5,00,00,000 to Above', rate: '4.00%', index: 1 },
+              { label: '₹1,00,00,000 to ₹4,99,99,999', rate: '3.00%', index: 0 },
+              { label: '₹5,00,00,000 and Above', rate: '4.00%', index: 1 },
             ].map((slab) => {
               const isActive = giActiveIndex >= 0 && slab.index === giActiveIndex
               return (
@@ -2917,13 +2861,13 @@ export default function ReferralDashboard({
                     <tbody className={`divide-y ${t('divide-white/[0.05]', 'divide-gray-100')}`}>
                       <tr>
                         <td className="p-3 font-semibold text-white">Sale of Associate Channel Partner</td>
-                        <td className="p-3 text-gray-300">₹1,00,00,000 to ₹5,00,00,000</td>
+                        <td className="p-3 text-gray-300">₹1,00,00,000 to ₹4,99,99,999</td>
                         <td className="p-3 text-right font-mono font-bold text-brand-red">3.00%</td>
                         <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
                       </tr>
                       <tr>
                         <td className="p-3 font-semibold text-white">Sale of Associate Channel Partner</td>
-                        <td className="p-3 text-gray-300">₹5,00,00,000 to Above</td>
+                        <td className="p-3 text-gray-300">₹5,00,00,000 and Above</td>
                         <td className="p-3 text-right font-mono font-bold text-brand-red">4.00%</td>
                         <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
                       </tr>

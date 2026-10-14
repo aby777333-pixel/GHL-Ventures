@@ -319,13 +319,26 @@ export default function DashboardClient() {
   const router = useRouter()
   const pathname = usePathname()
   const VALID_TABS: TabId[] = ['dashboard', 'investments', 'invest-onboard', 'portfolio', 'kyc', 'documents', 'transactions', 'messages', 'support', 'calculators', 'ai-advisor', 'referrals', 'profile', 'settings']
+  // The referral page carries a role-specific slug so a general investor, a
+  // channel partner and a master channel partner never share one address.
+  // All three still render the same 'referrals' tab underneath.
+  const REFERRAL_SLUGS = ['referrals', 'G-referral', 'CP-referral', 'MCP-referral']
+  const referralSlugFor = (gid: string) => {
+    const k = String(gid || '').trim().toUpperCase()
+    if (k.startsWith('MCPGHL')) return 'MCP-referral'
+    if (k.startsWith('CPLGHL') || k.startsWith('CPGHL')) return 'CP-referral'
+    return 'G-referral'
+  }
+  const ghlIdRef = useRef('')
   const activeTab: TabId = useMemo(() => {
     const segments = pathname.split('/').filter(Boolean)
-    const tabSegment = segments[1] as TabId | undefined
-    return tabSegment && VALID_TABS.includes(tabSegment) ? tabSegment : 'dashboard'
+    const tabSegment = segments[1]
+    if (tabSegment && REFERRAL_SLUGS.includes(tabSegment)) return 'referrals'
+    return tabSegment && VALID_TABS.includes(tabSegment as TabId) ? (tabSegment as TabId) : 'dashboard'
   }, [pathname])
   const setActiveTab = useCallback((tab: TabId) => {
-    const url = tab === 'dashboard' ? '/dashboard' : `/dashboard/${tab}`
+    const slug = tab === 'referrals' ? referralSlugFor(ghlIdRef.current) : tab
+    const url = tab === 'dashboard' ? '/dashboard' : `/dashboard/${slug}`
     router.push(url, { scroll: false })
   }, [router])
 
@@ -427,6 +440,15 @@ export default function DashboardClient() {
 
   // ─── Auth ────────────────────────────────────────────────
   const { user, clientId, ghlId, isAuthenticated, emailVerified, loading: authLoading, logout, impersonating } = useClientAuth()
+
+  // Keep the slug helper fed, and move anyone who lands on the legacy
+  // /dashboard/referrals address onto their own role's URL.
+  useEffect(() => {
+    ghlIdRef.current = ghlId || ''
+    if (ghlId && pathname === '/dashboard/referrals') {
+      router.replace(`/dashboard/${referralSlugFor(ghlId)}`, { scroll: false })
+    }
+  }, [ghlId, pathname, router])
   const [dashboardAuthToken, setDashboardAuthToken] = useState('')
   useEffect(() => {
     getAuthToken().then((tok) => { if (tok) setDashboardAuthToken(tok) })
@@ -2139,7 +2161,7 @@ export default function DashboardClient() {
         {/* ─────────────────────────────────────────────────────────────
             2. TOP ROW: 3 SUMMARY CARDS (Matches Reference Row 1)
             ───────────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Card 1: WELCOME BACK */}
           <div
             className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
@@ -2262,62 +2284,6 @@ export default function DashboardClient() {
             </div>
           </div>
 
-          {/* Card 3: PAN & AADHAAR */}
-          <div
-            className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
-              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
-              'bg-white border-gray-200 shadow-sm'
-            )}`}
-          >
-            <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
-            <div className="flex items-start gap-3.5">
-              <div
-                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
-                  'bg-red-950/40 border-red-800/30 text-red-400',
-                  'bg-red-50 border-red-100 text-brand-red'
-                )}`}
-              >
-                <CreditCard className="w-5 h-5" strokeWidth={1.8} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
-                  PAN & AADHAAR
-                </span>
-                <h3
-                  className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}
-                  title={documentStatusHeading}
-                >
-                  {documentStatusHeading}
-                </h3>
-                {isIdentityLoading ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-500/15 text-gray-400 border border-gray-500/30 animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                    Checking...
-                  </span>
-                ) : panAadhaarLinked === true ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                    Linked
-                  </span>
-                ) : panAadhaarLinked === false ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/15 text-red-400 border border-red-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                    Not Linked
-                  </span>
-                ) : panDocStatus === 'Not Provided' && aadharDocStatus === 'Not Provided' ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-500/15 text-gray-400 border border-gray-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                    Not Provided
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    Linkage Unconfirmed
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* ─────────────────────────────────────────────────────────────
