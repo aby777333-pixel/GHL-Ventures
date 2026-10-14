@@ -53,9 +53,18 @@ async function queryTable<T>(table: string, orderBy = 'created_at'): Promise<T[]
 export async function getOverviewKPIs() {
   if (!isSupabaseConfigured()) return { totalAUM: 0, activeClients: 0, monthlyRevenue: 0, activeFunds: 0 }
   try {
-    const { data: clients } = await (supabase.from('clients').select('total_invested, kyc_status') as any)
+    const { data: clients } = await (supabase.from('clients').select('id, kyc_status') as any)
     const list = (clients || []) as any[]
-    const totalAUM = list.reduce((sum: number, c: any) => sum + (Number(c.total_invested) || 0), 0)
+    // Same reasoning as fetchClients: the AUM tile counts the money that
+    // actually went in, not the admin-set column.
+    const { data: aumApps } = await (supabase
+      .from('investment_applications')
+      .select('investment_amount, final_investment_amount, status') as any)
+    const AUM_QUALIFY = new Set(['approved', 'active', 'credited', 'completed', 'paid'])
+    const totalAUM = ((aumApps || []) as any[]).reduce((sum: number, a: any) => {
+      if (!AUM_QUALIFY.has(String(a?.status || '').toLowerCase())) return sum
+      return sum + (Number(a.final_investment_amount) || Number(a.investment_amount) || 0)
+    }, 0)
     const activeClients = list.filter((c: any) => c.kyc_status === 'verified' || c.kyc_status === 'approved').length
     return { totalAUM, activeClients, monthlyRevenue: 0, activeFunds: 0, totalClients: list.length }
   } catch { return { totalAUM: 0, activeClients: 0, monthlyRevenue: 0, activeFunds: 0 } }
@@ -103,7 +112,7 @@ export async function getOperationalStats() {
       // out. Previously the count tiles included trashed clients, so Total
       // Users / Invested Users / KYC totals read higher than the actual list.
       sb.from('clients').select('*', { count: 'exact', head: true }).is('deleted_at', null),
-      sb.from('clients').select('*', { count: 'exact', head: true }).gt('total_invested', 0).is('deleted_at', null),
+      sb.from('investment_applications').select('client_id, status'),
       // DASH-a: count clients by kyc_status — one row per investor.
       sb.from('clients').select('kyc_status').is('deleted_at', null),
       sb.from('investment_applications').select('investment_amount, fund_vehicle, status, created_at, final_investment_date, credit_given_at, credit_given'),
@@ -159,7 +168,19 @@ export async function getOperationalStats() {
 
     return {
       totalUsers: clientsResult.count ?? 0,
-      investedUsers: investedClientsResult.count ?? 0,
+      // Counted off the applications themselves: a client with a figure in
+      // clients.total_invested but nothing approved behind it is not an
+      // invested user.
+      investedUsers: (() => {
+        const QUALIFY = new Set(['approved', 'active', 'credited', 'completed', 'paid'])
+        const ids = new Set<string>()
+        for (const a of (((investedClientsResult as any)?.data || []) as any[])) {
+          if (!a?.client_id) continue
+          if (!QUALIFY.has(String(a.status || '').toLowerCase())) continue
+          ids.add(a.client_id)
+        }
+        return ids.size
+      })(),
       totalKyc,
       pendingKyc,
       approvedKyc,
@@ -310,6 +331,25 @@ export async function fetchClients(opts?: { includeTrashed?: boolean; trashedOnl
       return (basicPhoneMap.get(c.id) || '').trim()
     }
 
+    // clients.total_invested is admin-set and drifts: one client reads
+    // 3.30 Cr there while their applications add up to 10 L, another reads
+    // 25 L with nothing behind it at all. AUM is therefore summed from the
+    // investment applications themselves and that column is left alone.
+    const investedBy = new Map<string, number>()
+    try {
+      const { data: apps } = await (supabase
+        .from('investment_applications')
+        .select('client_id, investment_amount, final_investment_amount, status') as any)
+      const QUALIFY = new Set(['approved', 'active', 'credited', 'completed', 'paid'])
+      for (const a of ((apps || []) as any[])) {
+        if (!a?.client_id) continue
+        if (!QUALIFY.has(String(a.status || '').toLowerCase())) continue
+        const amt = Number(a.final_investment_amount) || Number(a.investment_amount) || 0
+        investedBy.set(a.client_id, (investedBy.get(a.client_id) || 0) + amt)
+      }
+    } catch { /* non-blocking: an empty map reads zero, never a stale figure */ }
+    const realInvested = (c: any) => investedBy.get(c?.id) || 0
+
     if (error || !data) {
       // Fallback: no join. MUST apply the same trashed filter as the primary
       // query above — otherwise a join error silently leaks soft-deleted
@@ -332,8 +372,8 @@ export async function fetchClients(opts?: { includeTrashed?: boolean; trashedOnl
         pan: panFor(c),
         kycStatus: c.kyc_status,
         accountStatus: c.kyc_status === 'verified' ? 'active' : 'pending',
-        aum: c.aum || c.total_invested || 0,
-        investedAmount: c.total_invested || 0,
+        aum: realInvested(c),
+        investedAmount: realInvested(c),
         currentValue: c.current_value || 0,
         riskProfile: c.risk_profile,
         city: c.city,
@@ -362,8 +402,8 @@ export async function fetchClients(opts?: { includeTrashed?: boolean; trashedOnl
       pan: panFor(c),
       kycStatus: c.kyc_status,
       accountStatus: c.kyc_status === 'verified' ? 'active' : 'pending',
-      aum: c.aum || c.total_invested || 0,
-      investedAmount: c.total_invested || 0,
+      aum: realInvested(c),
+      investedAmount: realInvested(c),
       currentValue: c.current_value || 0,
       riskProfile: c.risk_profile,
       city: c.city,

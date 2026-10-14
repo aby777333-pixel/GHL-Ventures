@@ -439,7 +439,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
         )}
         {activeTab === 'list' && (
           <ClientListTab
-            clients={subTab === 'invested' ? clients.filter((c: any) => Number(c.investedAmount || c.total_invested || 0) > 0) : clients}
+            clients={subTab === 'invested' ? clients.filter((c: any) => Number(c.investedAmount || 0) > 0) : clients}
             onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
             onDeleteClient={handleDeleteClient}
             onResetPassword={openResetForClient}
@@ -612,7 +612,6 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       pan: clientForm.pan || null,
                       risk_profile: sanitizedRisk,
                       assigned_rm: sanitizedRM,
-                      total_invested: parseFloat(clientForm.total_invested) || 0,
                       referred_by: referredBy,
                     }
                     if (joinedAtValue) {
@@ -670,7 +669,6 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       pan: clientForm.pan || null,
                       risk_profile: sanitizedRisk,
                       assigned_rm: sanitizedRM,
-                      total_invested: parseFloat(clientForm.total_invested) || 0,
                       referred_by: (clientForm.referred_by || '').trim() || null,
                       client_code: clientCode,
                       kyc_status: 'pending',
@@ -739,7 +737,16 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Initial Investment Amount (₹)</label>
-                <input type="number" placeholder="0" value={clientForm.total_invested} onChange={e => setClientForm(f => ({ ...f, total_invested: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                {/* Read-only: this figure is summed from the client's approved
+                    investment applications. It used to be a free-text column an
+                    admin could set, which is how one client came to read 3.30 Cr
+                    against 10 L of actual applications. */}
+                <div className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-3 py-2.5 text-sm text-gray-300">
+                  {'\u20B9'}{Number(clientForm.total_invested || 0).toLocaleString('en-IN')}
+                  <span className="block text-[10px] text-gray-600 mt-0.5">
+                    Summed from approved investments \u2014 not editable
+                  </span>
+                </div>
               </div>
               <div>
                 {/* Testing Report 2 (2026-04-25 #3): admin can back-fill a
